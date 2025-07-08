@@ -1,198 +1,170 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
-    <meta charset="UTF-8">
-    <title>代词转换大师</title>
-    <style>
-        :root {
-            --primary: #FF6B6B;
-            --secondary: #4ECDC4;
-            --background: #2D3436;
-        }
+  <meta charset="UTF-8">
+  <title>大尺寸 Flashcard 发音练习</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", sans-serif;
+      background-color: #f0f8ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+    }
 
-        body {
-            margin: 0;
-            min-height: 100vh;
-            background: var(--background);
-            font-family: Arial;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-        }
+    h1 {
+      color: #333;
+      margin-top: 20px;
+    }
 
-        #game-box {
-            width: 800px;
-            padding: 20px;
-            background: #333;
-            border-radius: 10px;
-            text-align: center;
-        }
+    .mode {
+      font-size: 20px;
+      margin: 10px 0;
+      color: #444;
+    }
 
-        #question {
-            font-size: 24px;
-            margin: 20px 0;
-            color: var(--secondary);
-            min-height: 60px;
-        }
+    .card-container {
+      perspective: 1000px;
+      margin: 20px;
+    }
 
-        .options-container {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin: 30px 0;
-        }
+    .card {
+      width: 80vw;
+      height: 50vh;
+      max-width: 800px;
+      max-height: 500px;
+      background-color: #fff;
+      border-radius: 20px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      text-align: center;
+      font-size: 40px;
+      cursor: pointer;
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+      position: relative;
+    }
 
-        .option {
-            padding: 15px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+    }
 
-        .option:hover {
-            background: var(--primary);
-            transform: scale(1.05);
-        }
+    .card.flipped .card-inner {
+      transform: rotateY(180deg);
+    }
 
-        #progress {
-            font-size: 18px;
-            color: var(--secondary);
-        }
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      padding: 40px;
+      border-radius: 20px;
+      backface-visibility: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.2rem;
+      box-sizing: border-box;
+    }
 
-        #score {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            font-size: 20px;
-        }
-    </style>
+    .front {
+      background-color: #ffffff;
+    }
+
+    .back {
+      background-color: #d0f0d8;
+      transform: rotateY(180deg);
+    }
+
+    .button-group {
+      margin: 20px;
+    }
+
+    button {
+      padding: 14px 28px;
+      font-size: 18px;
+      margin: 10px;
+      border: none;
+      border-radius: 10px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
 </head>
 <body>
-    <div id="score">得分: 0</div>
-    <div id="game-box">
-        <div id="question"></div>
-        <div class="options-container"></div>
-        <div id="progress"></div>
+
+  <h1>📚 英语发音 Flashcard</h1>
+  <div class="mode">当前模式：<span id="modeLabel">英文→中文</span></div>
+
+  <div class="card-container">
+    <div class="card" id="card" onclick="flipCard()">
+      <div class="card-inner">
+        <div class="card-face front" id="cardFront">正面</div>
+        <div class="card-face back" id="cardBack">背面</div>
+      </div>
     </div>
+  </div>
 
-<script>
-// 完整的代词题库（覆盖所有7个人称）
-const pronounBank = [
-    {
-        chinese: "我",
-        forms: ["I", "me", "my", "mine", "myself"]
-    },
-    {
-        chinese: "你",
-        forms: ["you", "you", "your", "yours", "yourself"]
-    },
-    {
-        chinese: "他",
-        forms: ["he", "him", "his", "his", "himself"]
-    },
-    {
-        chinese: "她",
-        forms: ["she", "her", "her", "hers", "herself"]
-    },
-    {
-        chinese: "它",
-        forms: ["it", "it", "its", "its", "itself"]
-    },
-    {
-        chinese: "我们",
-        forms: ["we", "us", "our", "ours", "ourselves"]
-    },
-    {
-        chinese: "他们",
-        forms: ["they", "them", "their", "theirs", "themselves"]
-    }
-];
+  <div class="button-group">
+    <button onclick="showNextCard()">🎲 下一张</button>
+    <button onclick="toggleMode()">🔁 切换模式</button>
+  </div>
 
-// 题型配置
-const questionTypes = [
-    { from: 0, to: 0, desc: "的主格形式是？" },  // 中文->主格
-    { from: 0, to: 1, desc: "的宾格形式是？" },  // 中文->宾格
-    { from: 0, to: 2, desc: "的形容词性物主代词是？" }, // 中文->形容词性
-    { from: 2, to: 3, desc: "对应的名词性物主代词是？" }, // 形容词性->名词性
-    { from: 1, to: 4, desc: "的反身代词是？" }  // 宾格->反身
-];
+  <script>
+    const flashcards = [
+      { word: "dad", phonetic: "/dæd/", meaning: "爸爸" },
+      { word: "bad", phonetic: "/bæd/", meaning: "坏的" },
+      { word: "fat", phonetic: "/fæt/", meaning: "胖的" },
+      { word: "rat", phonetic: "/ræt/", meaning: "老鼠" },
+      { word: "cat", phonetic: "/kæt/", meaning: "猫" },
+      { word: "map", phonetic: "/mæp/", meaning: "地图" },
+      { word: "wake", phonetic: "/weɪk/", meaning: "醒来" },
+      { word: "late", phonetic: "/leɪt/", meaning: "迟到的" },
+      { word: "cake", phonetic: "/keɪk/", meaning: "蛋糕" },
+      { word: "take", phonetic: "/teɪk/", meaning: "拿取" },
+      { word: "skate", phonetic: "/skeɪt/", meaning: "滑冰" }
+    ];
 
-let currentQuestion = null;
-let score = 0;
-let questionCount = 0;
+    let englishFirst = true;
 
-function generateQuestion() {
-    // 随机选择一个人称
-    const pronoun = pronounBank[Math.floor(Math.random() * pronounBank.length)];
-    // 随机选择一个题型
-    const type = questionTypes[Math.floor(Math.random() * questionTypes.length)];
-    
-    // 生成问题描述
-    let questionText = '';
-    if(type.from === 0) { // 中文提问
-        questionText = `${pronoun.chinese}${type.desc}`;
-    } else { // 英文转换
-        const fromForm = pronoun.forms[type.from];
-        questionText = `${fromForm}${type.desc}`;
+    function showNextCard() {
+      const card = flashcards[Math.floor(Math.random() * flashcards.length)];
+      if (englishFirst) {
+        document.getElementById("cardFront").innerHTML = card.word;
+        document.getElementById("cardBack").innerHTML = `${card.phonetic}<br>${card.meaning}`;
+        document.getElementById("modeLabel").textContent = "英文→中文";
+      } else {
+        document.getElementById("cardFront").innerHTML = card.meaning;
+        document.getElementById("cardBack").innerHTML = `${card.word}<br>${card.phonetic}`;
+        document.getElementById("modeLabel").textContent = "中文→英文";
+      }
+      document.getElementById("card").classList.remove("flipped");
     }
 
-    // 生成选项
-    const correctAnswer = pronoun.forms[type.to];
-    const options = [correctAnswer];
-    
-    // 生成3个干扰项
-    while(options.length < 4) {
-        const randomPronoun = pronounBank[Math.floor(Math.random() * pronounBank.length)];
-        const candidate = randomPronoun.forms[type.to];
-        if(!options.includes(candidate) && candidate !== correctAnswer) {
-            options.push(candidate);
-        }
+    function flipCard() {
+      document.getElementById("card").classList.toggle("flipped");
     }
 
-    return {
-        question: questionText,
-        options: shuffleArray(options),
-        answer: correctAnswer
-    };
-}
-
-function displayQuestion() {
-    currentQuestion = generateQuestion();
-    questionCount++;
-    
-    document.getElementById('question').textContent = currentQuestion.question;
-    document.getElementById('progress').textContent = `第 ${questionCount} 题`;
-    
-    const container = document.querySelector('.options-container');
-    container.innerHTML = currentQuestion.options.map(opt => `
-        <div class="option" onclick="checkAnswer('${opt}')">${opt}</div>
-    `).join('');
-}
-
-function checkAnswer(selected) {
-    if(selected === currentQuestion.answer) {
-        score += 10;
-        document.getElementById('score').textContent = `得分: ${score}`;
-        alert('✅ 正确！');
-    } else {
-        alert(`❌ 正确答案是：${currentQuestion.answer}`);
+    function toggleMode() {
+      englishFirst = !englishFirst;
+      showNextCard();
     }
-    displayQuestion();
-}
 
-// 工具函数
-function shuffleArray(arr) {
-    for(let i = arr.length-1; i > 0; i--){
-        const j = Math.floor(Math.random()*(i+1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
-}
+    window.onload = showNextCard;
+  </script>
 
-// 开始游戏
-displayQuestion();
-</script>
 </body>
 </html>
+
